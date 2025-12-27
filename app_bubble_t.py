@@ -1,7 +1,7 @@
 import streamlit as st
 import math
 
-st.title("Bubble T Calculation")
+st.title("Bubble Point Calculation App")
 
 # ===================== Utility Functions =====================
 
@@ -220,35 +220,22 @@ def bubble_point_iteration(T0, P, x, A, B, C, T_unit_Ant, V, a, R,
 
 # ===================== Streamlit UI =====================
 
-# ===================== Streamlit UI =====================
+n = st.sidebar.number_input("Number of components", min_value=1, value=2)
 
-n = st.sidebar.number_input("Number of components", min_value=1, value=2, key="n")
-
-nonideal_liq = st.sidebar.radio("Liquid phase non-ideal?", ["Yes", "No"], index=0, key="nonideal_liq") == "Yes"
-nonideal_gas = st.sidebar.radio("Gas phase non-ideal?", ["Yes", "No"], index=0, key="nonideal_gas") == "Yes"
+nonideal_liq = st.sidebar.radio("Liquid phase non-ideal?", ["Yes", "No"]) == "Yes"
+nonideal_gas = st.sidebar.radio("Gas phase non-ideal?", ["Yes", "No"]) == "Yes"
 
 # Wilson parameters
 a = [[0.0]*n for _ in range(n)]
-V = []
+V = [1.0]*n
 
 if nonideal_liq:
     st.sidebar.subheader("Wilson Parameters")
     for i in range(n):
         for j in range(n):
             if i != j:
-                key_a = f"a{i}{j}"
-                if key_a not in st.session_state:
-                    st.session_state[key_a] = 0.0
-                a[i][j] = st.sidebar.number_input(f"a{i+1}{j+1}", value=st.session_state[key_a], format="%.8f", key=key_a)
-
-    for i in range(n):
-        key_V = f"V{i}"
-        if key_V not in st.session_state:
-            st.session_state[key_V] = 1.0
-        V_i = st.sidebar.number_input(f"V{i+1}", value=st.session_state[key_V], format="%.8f", key=key_V)
-        V.append(V_i)
-else:
-    V = [1.0]*n
+                a[i][j] = st.sidebar.number_input(f"a{i+1}{j+1}", value=0.0, format="%.8f")
+    V = [st.sidebar.number_input(f"V{i+1}", value=1.0, format="%.8f") for i in range(n)]
 
 # Virial coefficients
 Bik = [[0.0]*n for _ in range(n)]
@@ -256,62 +243,30 @@ if nonideal_gas:
     st.sidebar.subheader("Virial Coefficients")
     for i in range(n):
         for j in range(i, n):
-            key_Bik = f"Bik{i}{j}"
-            if key_Bik not in st.session_state:
-                st.session_state[key_Bik] = 0.0
-            val = st.sidebar.number_input(f"B{i+1}{j+1}", value=st.session_state[key_Bik], format="%.8f", key=key_Bik)
+            val = st.sidebar.number_input(f"B{i+1}{j+1}", value=0.0, format="%.8f")
             Bik[i][j] = Bik[j][i] = val
 
-# Antoine constants
-A = []
-B = []
-C = []
-for i in range(n):
-    keyA = f"A{i}"
-    keyB = f"B{i}"
-    keyC = f"C{i}"
-    
-    if keyA not in st.session_state:
-        st.session_state[keyA] = 8.07131
-    if keyB not in st.session_state:
-        st.session_state[keyB] = 1730.63
-    if keyC not in st.session_state:
-        st.session_state[keyC] = 233.426
+A = [st.sidebar.number_input(f"A{i+1}", value=8.07131, format="%.8f") for i in range(n)]
+B = [st.sidebar.number_input(f"B{i+1}", value=1730.63, format="%.8f") for i in range(n)]
+C = [st.sidebar.number_input(f"C{i+1}", value=233.426, format="%.8f") for i in range(n)]
 
-    Ai = st.sidebar.number_input(f"A{i+1}", value=st.session_state[keyA], format="%.8f", key=keyA)
-    Bi = st.sidebar.number_input(f"B{i+1}", value=st.session_state[keyB], format="%.8f", key=keyB)
-    Ci = st.sidebar.number_input(f"C{i+1}", value=st.session_state[keyC], format="%.8f", key=keyC)
+Ptot = st.sidebar.number_input("System Pressure", value=101.325, format="%.8f")
+R = st.sidebar.number_input("Gas Constant R", value=8.314, format="%.8f")
 
-    A.append(Ai)
-    B.append(Bi)
-    C.append(Ci)
+T_unit = st.sidebar.selectbox("Temperature unit", ["C", "K"]).lower()
+P_unit = st.sidebar.selectbox("Pressure unit", ["mmHg", "bar", "kPa"]).lower()
 
-# System parameters
-if "Ptot" not in st.session_state:
-    st.session_state.Ptot = 101.325
-Ptot = st.sidebar.number_input("System Pressure", value=st.session_state.Ptot, format="%.8f", key="Ptot")
+T_unit_Ant = T_unit
+P_unit_Ant = P_unit
 
-if "R" not in st.session_state:
-    st.session_state.R = 8.314
-R = st.sidebar.number_input("Gas Constant R", value=st.session_state.R, format="%.8f", key="R")
 
-# Mole fractions
-x = []
-for i in range(n):
-    key_x = f"x{i}"
-    if key_x not in st.session_state:
-        st.session_state[key_x] = 1/n
-    xi = st.sidebar.number_input(f"x{i+1}", value=st.session_state[key_x], format="%.8f", key=key_x)
-    x.append(xi)
+P = convert_pressure_to_kpa(Ptot, P_unit)
 
-if "tol" not in st.session_state:
-    st.session_state.tol = 0.01
-tol = st.sidebar.number_input("Temperature tolerance (%)", value=st.session_state.tol, format="%.8f", key="tol")
+k_index = st.sidebar.number_input("Fixed component", min_value=1, max_value=n, value=1) - 1
 
-# Temperature and Pressure units
-T_unit = st.sidebar.selectbox("Temperature unit", ["C", "K"], index=0, key="T_unit").lower()
-P_unit = st.sidebar.selectbox("Pressure unit", ["mmHg", "bar", "kPa"], index=2, key="P_unit").lower()
+x = [st.sidebar.number_input(f"x{i+1}", value=1/n, format="%.8f") for i in range(n)]
 
+tol = st.sidebar.number_input("Temperature tolerance (%)", value=0.01, format="%.8f")
 
 # ===================== Run =====================
 
