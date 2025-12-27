@@ -1,7 +1,7 @@
 import streamlit as st
 import math
 
-st.title("Dew T Calculation")
+st.title("Dew T Calculation ")
 
 
 def calculate_T0(P, A, B, C, P_unit_Ant, T_unit_Ant,y):
@@ -302,120 +302,89 @@ calc_type = st.radio("Choose Calculation Type:", ["Dew Point"])
 
 import streamlit as st
 
-# ===================== Streamlit UI for Dew Point =====================
+# عدد المكونات
+n = st.sidebar.number_input("Number of components:", min_value=1, value=2, format="%.8f")
 
-n = st.sidebar.number_input("Number of components", min_value=1, value=2, key="n")
+# هل الطور السائل غير مثالي؟
+nonideal_liq = st.sidebar.radio("Is liquid phase non-ideal?", ["Yes", "No"]) == "Yes"
+# هل الطور الغازي غير مثالي؟
+nonideal_gas = st.sidebar.radio("Is gas phase non-ideal?", ["Yes", "No"]) == "Yes"
 
-nonideal_liq = st.sidebar.radio("Liquid phase non-ideal?", ["Yes", "No"], index=0, key="nonideal_liq") == "Yes"
-nonideal_gas = st.sidebar.radio("Gas phase non-ideal?", ["Yes", "No"], index=0, key="nonideal_gas") == "Yes"
-
-# Wilson parameters
-a = [[0.0]*n for _ in range(n)]
-V = []
-
-k_index = st.sidebar.number_input(f"Fixed component (1-{n})", min_value=1, max_value=n, value=1, key="k_index") - 1
-
+# الطور السائل
 if nonideal_liq:
-    st.sidebar.subheader("Wilson Parameters")
+    a = [[0.0 for j in range(n)] for i in range(n)]
+    st.sidebar.write("Enter Wilson equation constants a_ij:")
     for i in range(n):
         for j in range(n):
             if i != j:
-                key_a = f"a{i}{j}"
-                if key_a not in st.session_state:
-                    st.session_state[key_a] = 0.0
-                a[i][j] = st.sidebar.number_input(f"a{i+1}{j+1}", value=st.session_state[key_a], format="%.8f", key=key_a)
+                a[i][j] = st.sidebar.number_input(f"a{i+1}{j+1}", value=0.0, format="%.8f")
 
-    for i in range(n):
-        key_V = f"V{i}"
-        if key_V not in st.session_state:
-            st.session_state[key_V] = 1.0
-        V_i = st.sidebar.number_input(f"V{i+1}", value=st.session_state[key_V], format="%.8f", key=key_V)
-        V.append(V_i)
+    V = [st.sidebar.number_input(f"V{i+1} (molar volume)", value=1.0, format="%.8f") for i in range(n)]
 else:
-    V = [1.0]*n
+    a = [[0.0 for j in range(n)] for i in range(n)]
+    V = [1.0] * n
 
-# Virial coefficients
-Bik = [[0.0]*n for _ in range(n)]
+# الطور الغازي
 if nonideal_gas:
-    st.sidebar.subheader("Virial Coefficients")
+    Bik = [[0.0 for j in range(n)] for i in range(n)]
+    st.sidebar.write("Enter second virial coefficients Bik (including Bii):")
     for i in range(n):
-        for j in range(i, n):
-            key_Bik = f"Bik{i}{j}"
-            if key_Bik not in st.session_state:
-                st.session_state[key_Bik] = 0.0
-            val = st.sidebar.number_input(f"B{i+1}{j+1}", value=st.session_state[key_Bik], format="%.8f", key=key_Bik)
-            Bik[i][j] = Bik[j][i] = val
+        for k in range(i, n):
+            val = st.sidebar.number_input(f"B{i+1}{k+1}", value=0.0, format="%.8f")
+            Bik[i][k] = val
+            if i != k:
+                Bik[k][i] = val
+else:
+    Bik = [[0.0 for j in range(n)] for i in range(n)]
 
 # Antoine constants
-A = []
-B = []
-C = []
-for i in range(n):
-    keyA = f"A{i}"
-    keyB = f"B{i}"
-    keyC = f"C{i}"
-    
-    if keyA not in st.session_state:
-        st.session_state[keyA] = 8.07131
-    if keyB not in st.session_state:
-        st.session_state[keyB] = 1730.63
-    if keyC not in st.session_state:
-        st.session_state[keyC] = 233.426
+A = [st.sidebar.number_input(f"A{i+1}", value=8.07131, format="%.8f") for i in range(n)]
+B = [st.sidebar.number_input(f"B{i+1}", value=1730.63, format="%.8f") for i in range(n)]
+C = [st.sidebar.number_input(f"C{i+1}", value=233.426, format="%.8f") for i in range(n)]
 
-    Ai = st.sidebar.number_input(f"A{i+1}", value=st.session_state[keyA], format="%.8f", key=keyA)
-    Bi = st.sidebar.number_input(f"B{i+1}", value=st.session_state[keyB], format="%.8f", key=keyB)
-    Ci = st.sidebar.number_input(f"C{i+1}", value=st.session_state[keyC], format="%.8f", key=keyC)
+# الضغط و الثوابت
+Ptot = st.sidebar.number_input("System Pressure P", value=101.325, format="%.8f")
+R = st.sidebar.number_input("Gas constant R", value=8.314, format="%.8f")
 
-    A.append(Ai)
-    B.append(Bi)
-    C.append(Ci)
+# وحدات الحرارة و الضغط
+T_unit_Ant = st.sidebar.selectbox("Temperature unit for Antoine equation", ["C", "K"]).lower()
+P_unit_Ant = st.sidebar.selectbox("Saturation pressure unit", ["mmHg", "bar", "kPa"]).lower()
 
-# System parameters
-if "Ptot" not in st.session_state:
-    st.session_state.Ptot = 101.325
-Ptot = st.sidebar.number_input("System Pressure", value=st.session_state.Ptot, format="%.8f", key="Ptot")
+# تحويل الضغط لوحدة kPa
+from dew_T import convert_pressure_to_kpa
+P = convert_pressure_to_kpa(Ptot, P_unit_Ant)
 
-if "R" not in st.session_state:
-    st.session_state.R = 8.314
-R = st.sidebar.number_input("Gas Constant R", value=st.session_state.R, format="%.8f", key="R")
+# الرقم الثابت للمكون
+k_index = st.sidebar.number_input(f"Fixed component number (1-{n})", min_value=1, max_value=n, value=1, format="%.8f") - 1
 
-# Mole fractions
-x = []
-for i in range(n):
-    key_x = f"x{i}"
-    if key_x not in st.session_state:
-        st.session_state[key_x] = 1/n
-    xi = st.sidebar.number_input(f"x{i+1}", value=st.session_state[key_x], format="%.8f", key=key_x)
-    x.append(xi)
+# النسب المولية
+y = [st.sidebar.number_input(f"y{i+1}", min_value=0.0, max_value=1.0, value=0.5, format="%.8f") for i in range(n)]
+if sum(y) != 1.0:
+    st.sidebar.warning(f"Sum of mole fractions should equal 1. Current sum = {sum(y)}")
 
-if "tol" not in st.session_state:
-    st.session_state.tol = 0.01
-tol = st.sidebar.number_input("Temperature tolerance (%)", value=st.session_state.tol, format="%.8f", key="tol")
+# Tolerance
+T_tol = st.sidebar.number_input("Error tolerance (%) for iteration of T", value=0.01, format="%.8f")
+gamma_tol = st.sidebar.number_input("Gamma convergence tolerance (%)", value=0.01, format="%.8f")
 
-# Temperature and Pressure units
-T_unit = st.sidebar.selectbox("Temperature unit", ["C", "K"], index=0, key="T_unit").lower()
-P_unit = st.sidebar.selectbox("Pressure unit", ["mmHg", "bar", "kPa"], index=2, key="P_unit").lower()
-T_unit_Ant = T_unit
-P_unit_Ant = P_unit
-
-
-# ===================== Run =====================
 
 if st.button("Calculate Dew Point"):
-    T0 = calculate_T0(Ptot, A, B, C, P_unit_Ant, T_unit_Ant, x)
-
-    T_final, x_final = dew_point_iteration(
-        T0, Ptot, x, A, B, C, T_unit_Ant,
-        V, a, R, k_index,
-        P_unit_Ant, tol,
-        nonideal_liq, nonideal_gas, Bik, gamma_tol=0.01
-    )
-
-    st.success(f"Converged Dew Point Temperature: {T_final:.8f} {T_unit_Ant.upper()}")
-    st.write("Liquid phase mole fractions xi:")
-    st.write(x_final)
+    try:
+        T0 =calculate_T0 (P, A, B, C, P_unit_Ant, T_unit_Ant,y)
 
 
+
+
+        T_final, x_final = dew_point_iteration(T0, P, y, A, B, C, T_unit_Ant, V, a, R, k_index, P_unit_Ant, T_tol, nonideal_liq, nonideal_gas, Bik, gamma_tol)
+
+        
+
+        st.success(f"Converged Dew Point Temperature: {T_final:.8f} {T_unit_Ant.upper()}")
+        st.write("Liquid phase mole fractions xi:")
+        st.write(x_final)
+
+    except ValueError as e:
+        # هذا البلوك ينفذ فقط إذا حصل خطأ
+        st.error(f"Error: {e}")
 
 
 
