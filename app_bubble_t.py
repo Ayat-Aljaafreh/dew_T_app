@@ -301,7 +301,7 @@ for i in range(n):
     key_x = f"x{i}"
     if key_x not in st.session_state:
         st.session_state[key_x] = 1/n
-    xi = st.sidebar.number_input(f"x{i+1}", value=st.session_state[key_x], format="%.8f", key=key_x)
+    xi = st.sidebar.number_input(f"y{i+1}", value=st.session_state[key_x], format="%.8f", key=key_x)
     x.append(xi)
 
 if "tol" not in st.session_state:
