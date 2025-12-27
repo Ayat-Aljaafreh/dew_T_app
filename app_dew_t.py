@@ -402,10 +402,10 @@ P_unit_Ant = P_unit
 # ===================== Run =====================
 
 if st.button("Calculate Dew Point"):
-    T0 = calculate_T0(P, A, B, C, P_unit_Ant, T_unit_Ant, x)
+    T0 = calculate_T0(Ptot, A, B, C, P_unit_Ant, T_unit_Ant, x)
 
     T_final, x_final = dew_point_iteration(
-        T0, P, x, A, B, C, T_unit_Ant,
+        T0, Ptot, x, A, B, C, T_unit_Ant,
         V, a, R, k_index,
         P_unit_Ant, tol,
         nonideal_liq, nonideal_gas, Bik, gamma_tol=0.01
