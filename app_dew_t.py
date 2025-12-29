@@ -55,12 +55,12 @@ def calculate_gamma(x, Lambda):
 
     for i in range(n):
 
-        # first sum: sum_j (xj * Lambda_ij)
+        # first sum
         sum1 = 0.0
         for j in range(n):
             sum1 += x[j] * Lambda[i][j]
 
-        # second term: sum_k [ xk * Lambda_ki / sum_j(xj * Lambda_kj) ]
+        # second term
         sum2 = 0.0
         for k in range(n):
             denom = 0.0
@@ -100,7 +100,6 @@ def calculate_phi(T_old, P, Bik, R, y, T_unit):
     n = len(y)
     phi = []
 
-    # Compute Sij = 2*Bik - Bii - Bkk
     S = [[2 * Bik[i][j] - Bik[i][i] - Bik[j][j] for j in range(n)] for i in range(n)]
 
     for k in range(n):
@@ -305,12 +304,9 @@ import streamlit as st
 # عدد المكونات
 n = st.sidebar.number_input("Number of components:", min_value=1, value=2, format="%.8f")
 
-# هل الطور السائل غير مثالي؟
 nonideal_liq = st.sidebar.radio("Is liquid phase non-ideal?", ["Yes", "No"]) == "Yes"
-# هل الطور الغازي غير مثالي؟
 nonideal_gas = st.sidebar.radio("Is gas phase non-ideal?", ["Yes", "No"]) == "Yes"
 
-# الطور السائل
 if nonideal_liq:
     a = [[0.0 for j in range(n)] for i in range(n)]
     st.sidebar.write("Enter Wilson equation constants a_ij:")
@@ -324,7 +320,7 @@ else:
     a = [[0.0 for j in range(n)] for i in range(n)]
     V = [1.0] * n
 
-# الطور الغازي
+ 
 if nonideal_gas:
     Bik = [[0.0 for j in range(n)] for i in range(n)]
     st.sidebar.write("Enter second virial coefficients Bik (including Bii):")
@@ -350,8 +346,8 @@ R = st.sidebar.number_input("Gas constant R", value=8.314, format="%.8f")
 T_unit_Ant = st.sidebar.selectbox("Temperature unit for Antoine equation", ["C", "K"]).lower()
 P_unit_Ant = st.sidebar.selectbox("Saturation pressure unit", ["mmHg", "bar", "kPa"]).lower()
 
-# تحويل الضغط لوحدة kPa
-from dew_T import convert_pressure_to_kpa
+# تحويل الضغط لوحدة kPa 
+from dew_T import convert_pressure_to_kpa         #ارجعي لهاي النقطة
 P = convert_pressure_to_kpa(Ptot, P_unit_Ant)
 
 # الرقم الثابت للمكون
@@ -383,7 +379,6 @@ if st.button("Calculate Dew Point"):
         st.write(x_final)
 
     except ValueError as e:
-        # هذا البلوك ينفذ فقط إذا حصل خطأ
         st.error(f"Error: {e}")
 
 
